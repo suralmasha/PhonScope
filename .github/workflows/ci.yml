@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: python -m pip install '.[dev]'
+      - name: Run Ruff
+        run: make ruff-check PYTHON=python
+      - name: Build package
+        run: make package PYTHON=python
+      - name: Install built wheel
+        run: python -m pip install --force-reinstall --no-deps dist/*.whl
+      - name: Check installed package imports
+        working-directory: ${{ runner.temp }}
+        run: python -c 'from phonetic_diversity import get_full_coefficient, get_window_coefficient'
