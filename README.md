@@ -1,49 +1,61 @@
-# Phonetic Diversity and Balance Metric
-This is metric of phonetic diversity and balance of textual data. 
-It is supposed to be used while preparation or selection of training data for voice AI models. 
-However other purposes are possible.
+# PhonDB
 
-This metric has been implemented in several experiments with training TTS models on datasets with different phonetic composition. See examples of synthesis here: https://drive.google.com/drive/folders/1SnftUeiO1FOPIUo8s-MziaEkaL5fQbA9?usp=share_link.
+Библиотека вычисляет коэффициент фонетического разнообразия текстов для подготовки и отбора
+данных речевых моделей. Для русской транскрипции используется RuTranscript.
 
-# Installation
+Метрика применялась в экспериментах с обучением TTS на датасетах разного фонетического состава.
+[Примеры синтеза](https://drive.google.com/drive/folders/1SnftUeiO1FOPIUo8s-MziaEkaL5fQbA9?usp=share_link).
 
-```
-pip install git+https://github.com/suralmasha/PhonDB
-```
+## Установка
 
-# Usage
+Требуются Python 3.11 или 3.12 и `make`. В клонированном репозитории выполните:
 
-Define the path to your dataset. It can be a `txt` file or a folder with `txt` files 
-(in the example - `data_path`). 
-Pass it to the `get_window_coefficient()` function.
-
-```
-from phonetic_diversity import get_window_coefficient
-
-data_path = r"C:\natasha_dataset\marks.txt"
-res = get_window_coefficient(data_path)
-print(res)
+```sh
+make venv
+make install
 ```
 
-It will return a weighted coefficient 
-of phonetic diversity and balance of your textual data counted by the floating window 
-(size - **50 tokens**) in a `float` format. You can change the size of the window 
-by using parameter `window_length`.
+`make venv` создает `.venv`, `make install` устанавливает библиотеку, зависимости транскрипции
+и инструменты разработки. Зависимости объявлены в `setup.py` и `requirements.txt`,
+настройки сборки и Ruff - в `pyproject.toml`.
 
-```
-res = get_window_coefficient(data_path, window_length=20)
-print(res)
-```
+## Использование
 
-You can also get a coefficient of phonetic diversity and balance for the full text 
-by using `get_full_coefficient()` function.
+Входные данные - файл UTF-8 или каталог с файлами `.txt`. Каталог читается без рекурсии,
+в порядке имен файлов. Остальные файлы и вложенные каталоги пропускаются. Пустые строки
+пропускаются, границы между строками сохраняются как границы слов.
 
-```
-from phonetic_diversity import get_full_coefficient
+```python
+from phonetic_diversity import get_full_coefficient, get_window_coefficient
 
-data_path = r"C:\natasha_dataset\marks.txt"
-res = get_full_coefficient(data_path)
-print(res)
+data_path = 'path/to/dataset.txt'
+window_coefficient = get_window_coefficient(data_path, window_length=50)
+full_coefficient = get_full_coefficient(data_path)
 ```
 
-You can also find an example of using the framework in `example.py`.
+Обе функции возвращают `float`. `window_length` - положительное целое число слов в окне,
+по умолчанию 50. Усредняются только полные окна с шагом в одно слово. Если слов меньше
+длины окна, коэффициент вычисляется по всему тексту. Получение двух коэффициентов
+отдельными вызовами повторно транскрибирует данные.
+
+Несуществующий путь, пустой датасет и некорректная длина окна приводят к `ValueError`.
+Ошибки чтения и транскрипции передаются вызывающему коду: коэффициент по неполному
+датасету при сбое не возвращается.
+
+## Проверки
+
+```sh
+make ruff-check
+make package
+```
+
+`make ruff-check` проверяет форматирование и код, `make package` собирает wheel и sdist
+в `dist/`. Для автоматического форматирования и исправлений Ruff используйте `make ruff`.
+Параметр `PYTHON` позволяет выбрать интерпретатор; по умолчанию используется `.venv/bin/python`.
+CI проверяет код, сборку и импорт установленного wheel на Python 3.11 и 3.12.
+
+## Ограничения
+
+Математическое определение исходной метрики сохранено. Полный коэффициент зависит от длины
+текста и не различает все варианты распределения частот отдельных звуков. Его нельзя
+считать подтвержденной оценкой качества TTS или ASR без отдельной экспериментальной проверки.

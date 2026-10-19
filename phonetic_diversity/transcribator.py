@@ -1,54 +1,85 @@
-from os.path import isdir, isfile, join
-from os import listdir
-from tqdm import tqdm
+import logging
+from pathlib import Path
+
 from ru_transcript import RuTranscript
+from tqdm import tqdm
+
+logger = logging.getLogger(__name__)
 
 
 class Transcribator:
-    def __init__(self, data_path):
+    def __init__(self, data_path: str | Path) -> None:
         """
-        Transcribes text data.
+        Подготавливает транскрибирование текстового датасета.
 
-        :param data_path: Path to the dataset: txt file, directory with txt files.
+        :param data_path: Файл или каталог с файлами txt.
         """
-        self.data_path = data_path
-        self.phonemes = []
-        self.allophones = []
-        self.errors = {}
+        self.data_path = Path(data_path)
+        self.phonemes: list[str] = []
+        self.allophones: list[str] = []
+        self.errors: dict[str, Exception] = {}
 
-    def _open_file(self):
-        with open(self.data_path, encoding='utf-8') as f:
-            data = f.readlines()
+    def _open_file(self) -> list[str]:
+        """
+        Читает строки выбранного файла.
 
-        return data
+        :return: Строки текста в UTF-8.
+        """
+        return self.data_path.read_text(encoding='utf-8').splitlines()
 
-    def _open_dir(self):
-        files = listdir(self.data_path)
+    def _open_dir(self) -> list[str]:
+        """
+        Читает текстовые файлы каталога в стабильном порядке.
+
+        :return: Строки текста в UTF-8.
+        """
+        files = sorted(path for path in self.data_path.iterdir() if path.is_file() and path.suffix.lower() == '.txt')
         data = []
-        for file in tqdm(files, desc=f'Reading files from {self.data_path}'):
-            with open(join(self.data_path, file), encoding='utf-8') as f:
-                file_data = f.readlines()
-            data.extend(file_data)
-
+        for path in tqdm(files, desc='Reading text files'):
+            data.extend(path.read_text(encoding='utf-8').splitlines())
         return data
 
-    def transcribe(self):
-        if isfile(self.data_path):
+    def transcribe(self) -> None:
+        """
+        Транскрибирует непустые строки, сохраняя границы между ними.
+
+        Ошибки транскрипции передаются вызывающему коду.
+        """
+        self.phonemes.clear()
+        self.allophones.clear()
+        self.errors.clear()
+        if self.data_path.is_file():
             data = self._open_file()
-        elif isdir(self.data_path):
+        elif self.data_path.is_dir():
             data = self._open_dir()
         else:
-            raise ValueError('data_path should be a txt file or a directory with txt files')
+            raise ValueError('data_path must be a text file or a directory with txt files')
 
-        for text in tqdm(data, desc=f'Transcribing text from {self.data_path}'):
+        for text in tqdm(data, desc='Transcribing text'):
+            if not text.strip():
+                continue
             try:
                 ru_transcript = RuTranscript(text, stress_place='before')
                 ru_transcript.transcribe()
-                self.phonemes.extend(ru_transcript.get_phonemes(save_spaces=True))
-                self.allophones.extend(ru_transcript.get_allophones(save_spaces=True))
-            except Exception as error:
+                phonemes = ru_transcript.get_phonemes(save_spaces=True)
+                allophones = ru_transcript.get_allophones(save_spaces=True)
+            except (ValueError, KeyError, RuntimeError) as error:
                 self.errors[text] = error
+                raise
+            if not phonemes and not allophones:
+                continue
+            if not phonemes or not allophones:
+                raise ValueError('Transcription must contain both phonemes and allophones')
+            if self.phonemes:
+                self.phonemes.append('_')
+                self.allophones.append('_')
+            self.phonemes.extend(phonemes)
+            self.allophones.extend(allophones)
 
-    def see_errors(self):
-        for k, v in self.errors.items():
-            print(f'{k} - {v}')
+        if not self.phonemes or not self.allophones:
+            raise ValueError('Dataset contains no transcribable text')
+
+    def see_errors(self) -> None:
+        """Выводит сохраненные ошибки через стандартный logger."""
+        for error in self.errors.values():
+            logger.error('Transcription failed: %s', error)
