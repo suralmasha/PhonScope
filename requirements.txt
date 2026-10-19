@@ -1,1 +1,0 @@
--e git+https://github.com/suralmasha/RuTranscript#egg=ru_transcript
