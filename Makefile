@@ -1,20 +1,30 @@
-PYTHON ?= .venv/bin/python
-
-.PHONY: venv install ruff ruff-check package
+.PHONY: venv install lock ruff ruff-check ruff-unsafe-fix ty package pre-commit
 
 venv:
-	python3 -m venv .venv
+	uv venv --python 3.12
 
 install:
-	$(PYTHON) -m pip install -e '.[dev]'
+	uv sync --locked
+
+lock:
+	uv lock
 
 ruff:
-	$(PYTHON) -m ruff format
-	$(PYTHON) -m ruff check --fix
+	uv run --locked ruff format
+	uv run --locked ruff check --fix
 
 ruff-check:
-	$(PYTHON) -m ruff format --check
-	$(PYTHON) -m ruff check
+	uv run --locked ruff format --check
+	uv run --locked ruff check
+
+ruff-unsafe-fix:
+	uv run --locked ruff check --fix --unsafe-fixes
+
+ty:
+	uv run --locked ty check
 
 package:
-	$(PYTHON) -m build
+	uv build
+
+pre-commit:
+	uv run --locked pre-commit install

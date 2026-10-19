@@ -8,6 +8,8 @@ logger = logging.getLogger(__name__)
 
 
 class Transcribator:
+    """Транскрибирует текстовый датасет для вычисления метрики."""
+
     def __init__(self, data_path: str | Path) -> None:
         """
         Подготавливает транскрибирование текстового датасета.
@@ -53,7 +55,8 @@ class Transcribator:
         elif self.data_path.is_dir():
             data = self._open_dir()
         else:
-            raise ValueError('data_path must be a text file or a directory with txt files')
+            message = 'data_path must be a text file or a directory with txt files'
+            raise ValueError(message)
 
         for text in tqdm(data, desc='Transcribing text'):
             if not text.strip():
@@ -69,7 +72,8 @@ class Transcribator:
             if not phonemes and not allophones:
                 continue
             if not phonemes or not allophones:
-                raise ValueError('Transcription must contain both phonemes and allophones')
+                message = 'Transcription must contain both phonemes and allophones'
+                raise ValueError(message)
             if self.phonemes:
                 self.phonemes.append('_')
                 self.allophones.append('_')
@@ -77,7 +81,8 @@ class Transcribator:
             self.allophones.extend(allophones)
 
         if not self.phonemes or not self.allophones:
-            raise ValueError('Dataset contains no transcribable text')
+            message = 'Dataset contains no transcribable text'
+            raise ValueError(message)
 
     def see_errors(self) -> None:
         """Выводит сохраненные ошибки через стандартный logger."""

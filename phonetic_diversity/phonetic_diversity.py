@@ -23,7 +23,8 @@ def count_phonemes_and_allophones(sounds: list[str], group: str) -> list[str]:
     elif group in ['deaf', 'silent']:
         group = 'voiceless'
     if group not in ['vowel', 'sonorous', 'voiced', 'voiceless']:
-        raise ValueError(f'Unknown sound group: {group}')
+        message = f'Unknown sound group: {group}'
+        raise ValueError(message)
 
     result = []
     for phon in sounds:
@@ -50,7 +51,7 @@ def phoneme_allophone_ratio(ph: list[str], al: list[str]) -> float:
     return safe_divide(n_phonemes, n_allophones)
 
 
-def phon_db(
+def phon_db(  # noqa: PLR0913 - Сохраняется существующая сигнатура.
     text_ph: list[str],
     text_al: list[str],
     vowels_weight: float = 0.4,
@@ -99,13 +100,11 @@ def phon_db(
     sonorous_weight = sonorous_weight * x2
     voiced_weight = voiced_weight * x3
     voiceless_weight = voiceless_weight * x4
-    res = round(
+    return round(
         (vowels * vowels_weight + sonorous * sonorous_weight + voiced * voiced_weight + voiceless * voiceless_weight)
         * 100,
         4,
     )
-
-    return res
 
 
 def phon_db_window(text_ph: list[str], text_al: list[str], window_length: int = 50) -> float:
@@ -118,11 +117,13 @@ def phon_db_window(text_ph: list[str], text_al: list[str], window_length: int = 
     :return: Средний коэффициент или коэффициент всего короткого текста.
     """
     if isinstance(window_length, bool) or not isinstance(window_length, int) or window_length <= 0:
-        raise ValueError('window_length must be a positive integer')
+        message = 'window_length must be a positive integer'
+        raise ValueError(message)
     words_ph = [word.split() for word in ' '.join(text_ph).split('_') if word.strip()]
     words_al = [word.split() for word in ' '.join(text_al).split('_') if word.strip()]
     if len(words_ph) != len(words_al):
-        raise ValueError('Phoneme and allophone word counts must match')
+        message = 'Phoneme and allophone word counts must match'
+        raise ValueError(message)
 
     if len(words_ph) < (window_length + 1):
         ma_par = phon_db(text_ph, text_al)
@@ -147,7 +148,8 @@ def get_window_coefficient(data_path: str | Path, window_length: int = 50) -> fl
     :return: Средний коэффициент окон.
     """
     if isinstance(window_length, bool) or not isinstance(window_length, int) or window_length <= 0:
-        raise ValueError('window_length must be a positive integer')
+        message = 'window_length must be a positive integer'
+        raise ValueError(message)
     transcribator = Transcribator(data_path)
     transcribator.transcribe()
     return phon_db_window(transcribator.phonemes, transcribator.allophones, window_length=window_length)
