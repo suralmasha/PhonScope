@@ -10,6 +10,8 @@ authors = [
     { name = 'Alexandra Badasyan', email = 'sashabadasyan@icloud.com' },
 ]
 readme = 'README.md'
+license = 'MIT'
+license-files = ['LICENSE']
 requires-python = '>=3.12,<3.13'
 keywords = ['nlp', 'russian', 'phonetics', 'linguistic', 'voice', 'tts', 'asr']
 classifiers = [
