@@ -50,8 +50,7 @@ phoneme_evenness = report.groups[GroupName.PHONEMES].evenness
 comparison = compare_reports('path/to/report-a', 'path/to/report-b')
 ```
 
-The API returns Pydantic models. `report.model_dump_json(indent=2)` serializes analysis results;
-`example.py` provides another usage example.
+The API returns Pydantic models. `report.model_dump_json(indent=2)` serializes analysis results.
 
 Example HTML report for four utterances:
 
@@ -201,6 +200,8 @@ update `uv.lock` with `make lock` after dependency changes.
 
 Hatch-vcs derives package versions from `vMAJOR.MINOR.PATCH` Git tags; do not set them manually.
 Repository builds require Git history with tags. CI checks code, tests, packaging and installed imports.
+
+Changes are recorded in [CHANGELOG.md](CHANGELOG.md).
 
 The project is developed with assistance from GPT-6.1 Sol.
 
