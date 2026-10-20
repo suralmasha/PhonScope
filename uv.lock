@@ -559,11 +559,11 @@ wheels = [
 ]
 
 [[package]]
-name = "phonetic-diversity"
+name = "phonscope"
 source = { editable = "." }
 dependencies = [
+    { name = "pydantic" },
     { name = "rutranscript" },
-    { name = "tqdm" },
 ]
 
 [package.dev-dependencies]
@@ -575,8 +575,8 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "pydantic", specifier = "==2.14.1" },
     { name = "rutranscript", specifier = "==2.2.0" },
-    { name = "tqdm", specifier = "==4.67.3" },
 ]
 
 [package.metadata.requires-dev]

@@ -1,12 +1,8 @@
-import logging
+import sys
 
-from phonetic_diversity import get_full_coefficient, get_window_coefficient
-
-logger = logging.getLogger(__name__)
+from phonscope import ExpectedUnits, analyze_dataset
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
     data_path = 'path/to/your/dataset.txt'
-    res_window = get_window_coefficient(data_path)
-    res_full = get_full_coefficient(data_path)
-    logger.info('Window coefficient: %s; full coefficient: %s', res_window, res_full)
+    report = analyze_dataset(data_path, expected=ExpectedUnits(phonemes=['a', 'o']))
+    sys.stdout.write(report.model_dump_json(indent=2) + '\n')

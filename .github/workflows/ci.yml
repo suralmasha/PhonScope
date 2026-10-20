@@ -23,10 +23,15 @@ jobs:
         run: make ruff-check
       - name: Run ty
         run: make ty
+      - name: Run tests
+        run: make test
       - name: Build package
         run: make package
       - name: Install built wheel
         run: uv pip install --python .venv/bin/python --reinstall --no-deps dist/*.whl
       - name: Check installed package imports
         working-directory: ${{ runner.temp }}
-        run: ${{ github.workspace }}/.venv/bin/python -c 'from phonetic_diversity import get_full_coefficient, get_window_coefficient'
+        run: ${{ github.workspace }}/.venv/bin/python -c 'from phonscope import analyze_dataset, DatasetReport, ExpectedUnits'
+      - name: Check installed CLI
+        working-directory: ${{ runner.temp }}
+        run: ${{ github.workspace }}/.venv/bin/phonscope --help

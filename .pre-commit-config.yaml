@@ -1,6 +1,49 @@
 repos:
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.12
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
     hooks:
-      - id: ruff
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: check-yaml
+      - id: check-toml
+      - id: check-added-large-files
+      - id: check-merge-conflict
+  - repo: local
+    hooks:
       - id: ruff-format
+        name: Ruff format
+        entry: uv run --locked ruff format
+        language: system
+        types: [python]
+      - id: ruff
+        name: Ruff
+        entry: make ruff-check
+        language: system
+        pass_filenames: false
+        types: [python]
+      - id: ty
+        name: ty
+        entry: make ty
+        language: system
+        pass_filenames: false
+        types: [python]
+      - id: tests
+        name: Unit tests
+        entry: make test
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: htmlhint
+        name: HTMLHint
+        entry: htmlhint
+        language: node
+        additional_dependencies: [htmlhint@1.9.2]
+        types: [html]
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: [--no-verify]
