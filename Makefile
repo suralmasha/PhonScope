@@ -1,4 +1,4 @@
-.PHONY: venv install lock ruff ruff-check ruff-unsafe-fix ty package pre-commit
+.PHONY: venv install lock analyze test ruff ruff-check ruff-unsafe-fix ty package pre-commit
 
 venv:
 	uv venv --python 3.12
@@ -8,6 +8,12 @@ install:
 
 lock:
 	uv lock
+
+analyze:
+	@uv run --locked phonscope $(ARGS)
+
+test:
+	uv run --locked python -m unittest discover -s tests
 
 ruff:
 	uv run --locked ruff format

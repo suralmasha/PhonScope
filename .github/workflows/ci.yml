@@ -13,8 +13,8 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-python@v7
         with:
-          python-version-file: .python-version
-      - uses: astral-sh/setup-uv@v9
+          python-version: '3.12'
+      - uses: astral-sh/setup-uv@v10.3.0
         with:
           version: '0.11.11'
       - name: Install dependencies
@@ -23,10 +23,15 @@ jobs:
         run: make ruff-check
       - name: Run ty
         run: make ty
+      - name: Run tests
+        run: make test
       - name: Build package
         run: make package
       - name: Install built wheel
         run: uv pip install --python .venv/bin/python --reinstall --no-deps dist/*.whl
       - name: Check installed package imports
         working-directory: ${{ runner.temp }}
-        run: ${{ github.workspace }}/.venv/bin/python -c 'from phonetic_diversity import get_full_coefficient, get_window_coefficient'
+        run: ${{ github.workspace }}/.venv/bin/python -c 'from phonscope import analyze_dataset, DatasetReport, ExpectedUnits'
+      - name: Check installed CLI
+        working-directory: ${{ runner.temp }}
+        run: ${{ github.workspace }}/.venv/bin/phonscope --help

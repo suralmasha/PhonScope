@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="{{language}}">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PhonScope - {{comparison_title}}</title><style>/*STYLES*/</style></head>
+<body>
+<h1>PhonScope - {{comparison_title}}</h1>
+<p class="note" role="status"><!--CONCLUSION--></p>
+<p class="muted">{{dataset_a}}: <!--SOURCE_A--></p><p class="muted">{{dataset_b}}: <!--SOURCE_B--></p>
+<div class="scroll"><table><!--SUMMARY--></table></div>
+<p>{{comparison_note}}</p><p>{{size_note}}</p>
+<section><h2>{{frequency_title}}</h2><div class="controls">
+<label>{{group}} <select id="group"></select></label>
+<label>{{presence}} <select id="presence"><option value="">{{all_frequencies}}</option>
+<option value="common">{{common}}</option><option value="only_a">{{only_a}}</option><option value="only_b">{{only_b}}</option></select></label>
+<label>{{search}} <input id="search" type="search" placeholder="{{placeholder}}"></label></div>
+<div class="scroll"><table><thead><tr>
+<th><button data-sort="unit" type="button">{{unit}}</button></th><th>{{presence}}</th>
+<th><button data-sort="count_a" type="button">{{count_a}}</button></th>
+<th><button data-sort="count_b" type="button">{{count_b}}</button></th>
+<th><button data-sort="frequency_a" type="button">{{frequency_a}}</button></th>
+<th><button data-sort="frequency_b" type="button">{{frequency_b}}</button></th>
+<th><button data-sort="frequency_difference" type="button">{{frequency_difference}}</button></th>
+<th>{{included_a}}</th><th>{{included_b}}</th>
+</tr></thead><tbody id="units"></tbody></table></div>
+<div class="pager"><button id="previous" type="button">{{previous}}</button><span id="page" aria-live="polite"></span><button id="next" type="button">{{next}}</button></div>
+</section>
+<script id="report-data" type="application/json">/*REPORT_DATA*/</script>
+<script>
+'use strict';
+const report = JSON.parse(document.getElementById('report-data').textContent);
+const ui = report.ui;
+const get = id => document.getElementById(id);
+const displayUnit = item => item.unit.join(' · ');
+const number = value => value.toLocaleString(report.language, {maximumFractionDigits: 6});
+for (const name of Object.keys(report.groups)) {
+  const option = document.createElement('option');
+  option.value = name;
+  option.textContent = report.labels[name];
+  get('group').append(option);
+}
+let page = 0, sort = 'frequency_difference', descending = true;
+function render() {
+  const query = get('search').value.toLocaleLowerCase(report.language);
+  const presence = get('presence').value;
+  const items = report.groups[get('group').value].units.filter(item =>
+    (!presence || item.presence === presence) && displayUnit(item).toLocaleLowerCase(report.language).includes(query));
+  items.sort((a, b) => (sort === 'unit' ? displayUnit(a).localeCompare(displayUnit(b), report.language)
+    : a[sort] - b[sort]) * (descending ? -1 : 1));
+  const pages = Math.max(1, Math.ceil(items.length / 50));
+  page = Math.min(page, pages - 1);
+  get('units').replaceChildren();
+  for (const item of items.slice(page * 50, (page + 1) * 50)) {
+    const row = document.createElement('tr');
+    const included = value => value === null ? ui.undefined : value ? ui.yes : ui.no;
+    const values = [displayUnit(item), ui[item.presence], number(item.count_a), number(item.count_b),
+      number(100 * item.frequency_a), number(100 * item.frequency_b), number(100 * item.frequency_difference),
+      included(item.included_a), included(item.included_b)];
+    for (const value of values) {
+      const cell = document.createElement('td'); cell.textContent = value; row.append(cell);
+    }
+    get('units').append(row);
+  }
+  get('page').textContent = `${ui.page} ${page + 1} ${ui.of} ${pages}; ${ui.found}: ${number(items.length)}`;
+  get('previous').disabled = page === 0;
+  get('next').disabled = page >= pages - 1;
+  for (const button of document.querySelectorAll('[data-sort]')) {
+    button.parentElement.setAttribute('aria-sort', button.dataset.sort === sort
+      ? (descending ? 'descending' : 'ascending') : 'none');
+  }
+}
+for (const name of ['group', 'presence']) get(name).addEventListener('change', () => { page = 0; render(); });
+get('search').addEventListener('input', () => { page = 0; render(); });
+get('previous').addEventListener('click', () => { page--; render(); });
+get('next').addEventListener('click', () => { page++; render(); });
+for (const button of document.querySelectorAll('[data-sort]')) {
+  button.addEventListener('click', () => {
+    descending = sort === button.dataset.sort ? !descending : button.dataset.sort !== 'unit';
+    sort = button.dataset.sort; page = 0; render();
+  });
+}
+render();
+</script></body></html>

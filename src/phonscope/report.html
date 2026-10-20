@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="{{language}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PhonScope - {{title}}</title>
+<style>
+:root{font-family:system-ui,sans-serif;color:#1c3040;background:#f3f6f8}body{max-width:1100px;margin:0 auto;padding:32px 20px}h1{margin-bottom:4px}h2{margin-top:32px}p{line-height:1.6}.muted{color:#526577;overflow-wrap:anywhere}.cards{display:flex;gap:16px;flex-wrap:wrap}.card,section{background:white;border:1px solid #d4dfe6;border-radius:12px;padding:20px;margin:16px 0}.card{flex:1;min-width:160px}.value{display:block;font-size:30px;font-weight:700}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px;border-bottom:1px solid #e0e7ed}th{background:#f2f6f9}button,input,select{font:inherit;padding:9px;border:1px solid #9caeba;border-radius:6px;background:white;color:inherit}button{cursor:pointer}button:hover{background:#edf5fa}button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #287bb5;outline-offset:2px}.controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:16px 0}.scroll{overflow:auto}.unit{font-size:18px;white-space:pre-wrap}.bar{height:8px;background:#2378a5;border-radius:4px}.chart-row{display:grid;grid-template-columns:100px 1fr 80px;gap:12px;align-items:center;margin:10px 0}.note{padding:14px;border-left:4px solid #c88c24;background:#fff6e5}.pager{display:flex;gap:12px;align-items:center;margin-top:16px}.details{line-height:1.8;overflow-wrap:anywhere}summary{cursor:pointer}a{color:#126e9f}@media(max-width:600px){body{padding:16px 10px}section{padding:12px}.chart-row{grid-template-columns:75px 1fr 65px}}
+</style>
+</head>
+<body>
+<header><h1>PhonScope</h1><p class="muted">{{subtitle}}</p><p class="muted">{{source}}: <!--SOURCE--></p></header>
+<div class="cards">
+<div class="card">{{diversity}} <span class="value" id="score"></span>{{score_note}}</div>
+<div class="card">{{lines}} <span class="value" id="lines"></span>{{files}}: <span id="files"></span></div>
+</div>
+<p class="note" id="warnings">{{warnings}}: <!--WARNINGS-->. {{warning_note}}</p>
+<details><summary>{{diagnostics}}</summary><p>{{diagnostic_note}}</p><ul class="details"><!--WARNING_DETAILS--></ul></details>
+<p id="metric"></p><p>{{formula_note}}</p><p>{{filtered_note}}</p>
+<h2>{{overview}}</h2><p>{{overview_note}}</p>
+<div class="scroll"><table><thead><tr><th>{{group}}</th><th>{{unique}}</th><th>{{total}}</th><th>{{effective_diversity}}</th><th>{{evenness}}</th><th>{{retained}}</th><th>{{excluded_share}}</th></tr></thead><tbody id="overview"></tbody></table></div>
+<section aria-labelledby="frequency-title"><h2 id="frequency-title">{{frequency_title}}</h2>
+<div class="controls">
+<label>{{group}} <select id="group"></select></label>
+<label>{{search}} <input id="search" type="search" placeholder="{{placeholder}}"></label>
+<button id="csv" type="button">{{download}}</button>
+</div>
+<p class="muted">{{frequency_note}}</p>
+<h3>{{top}}</h3><div id="chart"></div>
+<h3>{{all_frequencies}}</h3>
+<div class="scroll"><table><thead><tr>
+<th><button data-sort="unit" type="button">{{unit}}</button></th>
+<th><button data-sort="count" type="button">{{total}}</button></th>
+<th><button data-sort="relative_frequency" type="button">{{share}}</button></th>
+</tr></thead><tbody id="frequencies"></tbody></table></div>
+<div class="pager"><button id="previous" type="button">{{previous}}</button><span id="page" aria-live="polite"></span><button id="next" type="button">{{next}}</button></div>
+<details><summary>{{missing_title}}</summary><p id="expected-source"></p><p class="details" id="missing"></p><p>{{expectation_note}}</p></details>
+</section>
+<h2>{{interpretation}}</h2>
+<ul class="details"><li>{{limitation_size}}</li><li>{{limitation_order}}</li><li>{{limitation_evenness}}</li><li>{{limitation_boundaries}}</li><li>{{limitation_norm}}</li></ul>
+<script id="report-data" type="application/json">/*REPORT_DATA*/</script>
+<script>
+'use strict';
+const report = JSON.parse(document.getElementById('report-data').textContent);
+const ui = report.ui;
+if (report.metric) {
+  document.getElementById('metric').textContent = `${ui.metric}: ${report.metric.formula}; ${ui.threshold}: ${report.metric.min_relative_frequency}`;
+}
+const get = id => document.getElementById(id);
+const displayUnit = item => item.unit.join(' · ');
+const number = value => value.toLocaleString(report.language);
+const percent = value => (100 * value).toLocaleString(report.language, {maximumFractionDigits: 4});
+function cell(row, text) {
+  const element = document.createElement('td');
+  element.textContent = text;
+  row.append(element);
+  return element;
+}
+get('score').textContent = report.score.toLocaleString(report.language, {maximumFractionDigits: 6});
+get('lines').textContent = number(report.lines);
+get('files').textContent = number(report.files);
+for (const [name, group] of Object.entries(report.groups)) {
+  const option = document.createElement('option');
+  option.value = name;
+  option.textContent = report.labels[name];
+  get('group').append(option);
+  const row = document.createElement('tr');
+  cell(row, report.labels[name]);
+  cell(row, number(group.unique));
+  cell(row, number(group.total));
+  cell(row, group.effective_diversity === null ? ui.undefined : group.effective_diversity.toFixed(3));
+  cell(row, group.evenness === null ? ui.undefined : group.evenness.toFixed(3));
+  cell(row, group.retained_unique === null ? ui.undefined : number(group.retained_unique));
+  cell(row, group.excluded_frequency === null ? ui.undefined : percent(group.excluded_frequency) + '%');
+  get('overview').append(row);
+}
+let page = 0, sort = 'count', descending = true;
+const pageSize = 50;
+function renderChart(group) {
+  get('chart').replaceChildren();
+  const top = [...group.frequencies].sort((a, b) => b.count - a.count).slice(0, 10);
+  for (const item of top) {
+    const row = document.createElement('div');
+    row.className = 'chart-row';
+    const label = document.createElement('span');
+    label.textContent = displayUnit(item);
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+    bar.style.width = `${100 * item.count / top[0].count}%`;
+    const value = document.createElement('span');
+    value.textContent = percent(item.relative_frequency) + '%';
+    row.append(label, bar, value);
+    get('chart').append(row);
+  }
+  if (!top.length) get('chart').textContent = ui.empty;
+}
+function render() {
+  const name = get('group').value;
+  const group = report.groups[name];
+  const query = get('search').value.toLocaleLowerCase(report.language);
+  const items = group.frequencies.filter(item => displayUnit(item).toLocaleLowerCase(report.language).includes(query));
+  items.sort((a, b) => (sort === 'unit'
+    ? displayUnit(a).localeCompare(displayUnit(b), report.language)
+    : a[sort] - b[sort]) * (descending ? -1 : 1));
+  const pages = Math.max(1, Math.ceil(items.length / pageSize));
+  page = Math.min(page, pages - 1);
+  get('frequencies').replaceChildren();
+  for (const item of items.slice(page * pageSize, (page + 1) * pageSize)) {
+    const row = document.createElement('tr');
+    cell(row, displayUnit(item)).className = 'unit';
+    cell(row, number(item.count));
+    cell(row, percent(item.relative_frequency));
+    get('frequencies').append(row);
+  }
+  get('page').textContent = `${ui.page} ${page + 1} ${ui.of} ${pages}; ${ui.found}: ${number(items.length)}`;
+  get('previous').disabled = page === 0;
+  get('next').disabled = page >= pages - 1;
+  for (const button of document.querySelectorAll('[data-sort]')) {
+    button.parentElement.setAttribute('aria-sort', button.dataset.sort === sort
+      ? (descending ? 'descending' : 'ascending') : 'none');
+  }
+  renderChart(group);
+  get('expected-source').textContent = report.expectations[name];
+  get('missing').textContent = group.missing === null ? ui.missing_unknown
+    : group.missing.length ? group.missing.map(unit => unit.join(' · ')).join(', ') : ui.missing_none;
+}
+get('group').addEventListener('change', () => { page = 0; render(); });
+get('search').addEventListener('input', () => { page = 0; render(); });
+get('previous').addEventListener('click', () => { page--; render(); });
+get('next').addEventListener('click', () => { page++; render(); });
+for (const button of document.querySelectorAll('[data-sort]')) {
+  button.addEventListener('click', () => {
+    descending = sort === button.dataset.sort ? !descending : button.dataset.sort !== 'unit';
+    sort = button.dataset.sort;
+    page = 0;
+    render();
+  });
+}
+function csvCell(value) {
+  let text = String(value);
+  if (/^[=+\-@\t\r]/.test(text)) text = "'" + text;
+  return '"' + text.replaceAll('"', '""') + '"';
+}
+get('csv').addEventListener('click', () => {
+  const name = get('group').value;
+  const rows = [['unit', 'count', 'relative_frequency'], ...report.groups[name].frequencies.map(
+    item => [displayUnit(item), item.count, item.relative_frequency])];
+  const url = URL.createObjectURL(new Blob([
+    '\uFEFF' + rows.map(row => row.map(csvCell).join(',')).join('\r\n')
+  ], {type: 'text/csv;charset=utf-8'}));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = name + '.csv';
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+});
+render();
+</script>
+</body></html>
